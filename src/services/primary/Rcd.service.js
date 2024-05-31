@@ -16,7 +16,7 @@ class RcdService {
 
   setStatusCountdownJob() {
     // Set the scheduler to run once per day at a specific time, for example, at 8 AM
-    scheduleJob("10 * * * *", async () => {
+    scheduleJob("0 4 * * *", async () => {
       const today = new Date();
       today.setHours(0, 0, 0, 0); // Set to midnight to compare only the date part
 
@@ -45,7 +45,6 @@ class RcdService {
   }
 
   async createData(data) {
-
     const addDataRcdModel = await this.RcdModel.create({
       title: data.title,
       picOne: data.picOne,
@@ -87,9 +86,16 @@ class RcdService {
     return getDetailRcd;
   }
 
-  async updateData(data) {
-    const updateDataRcd = await this.RcdModel.update(
-      {
+  async updateData(data, tokenData) {
+    const role = tokenData.data.role;
+    console.log(role)
+
+    const updateFields = role === "staff" ? {
+        description: data.description,
+        crNumber: data.crNumber,
+        status: data.status,
+        timeline: data.timeline,
+    } : {
         title: data.title,
         picOne: data.picOne,
         picTwo: data.picTwo,
@@ -97,17 +103,20 @@ class RcdService {
         description: data.description,
         crNumber: data.crNumber,
         status: data.status,
-        timeline: data.timeline
-      },
-      {
-        where: {
-          id: data.id,
-        },
-      }
-    );
+        timeline: data.timeline,
+    };
 
-    return 1;
-  }
+    const updateData = await this.RcdModel.update(updateFields, {
+        where: {
+            id: data.id,
+        },
+    });
+    console.log(updateData)
+    if(updateData[0] !== 0) return 1;
+    console.log('err')
+    return -1
+}
+
 
   async updateStatus(data) {
     const updateStatus = await this.RcdModel.update(
@@ -124,7 +133,10 @@ class RcdService {
     return 1;
   }
 
-  async deleteData(id) {
+  async deleteData(id, tokenData) {
+    const role = tokenData.data.role;
+    if(role === 'staff') return -1;
+
     const deleteaDataRcd = await this.RcdModel.destroy({
       where: {
         id,
@@ -265,7 +277,7 @@ class RcdService {
   }
 
   async search(title, category) {
-    if (category === "undefined") return -1;    
+    if (category === "undefined") return -1;
 
     const searchTitle = await this.RcdModel.findAll({
       where: {
@@ -320,7 +332,9 @@ class RcdService {
     return filterData;
   }
 
-  async downloadData(category) {
+  async downloadData(category, tokenData) {
+    const role = tokenData.data.role;
+    if(role === 'staff')  return -1;
     const dataRcd = await this.RcdModel.findAll({
       order: [
         ["status", "ASC"],
@@ -375,13 +389,6 @@ class RcdService {
           : { day: "2-digit", month: "long", year: "numeric" };
       return new Intl.DateTimeFormat("en-GB", options).format(date);
     };
-    // const timelineMap = new Map([
-    //   ["1", "Q1 - 2024"],
-    //   ["2", "Q2 - 2024"],
-    //   ["3", "Q3 - 2024"],
-    //   ["4", "Q4 - 2024"],
-    // ]);
-
     dataRcd.forEach((data) => {
       console.log(data);
       const timelineValue =

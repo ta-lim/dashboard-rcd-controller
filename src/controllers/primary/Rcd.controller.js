@@ -77,9 +77,13 @@ class RcdController {
       'validator',
       schemeValidate.errors[0]
     ));
-    const updateDataSrv = await this.RcdService.updateData(req.body);
-    if (updateDataSrv) return res.status(200).json(this.ResponsePreset.resOK("OK", null))
-    return -1;
+    const updateDataSrv = await this.RcdService.updateData(req.body, req.middlewares.authorization);
+    if (updateDataSrv === 1) return res.status(200).json(this.ResponsePreset.resOK("OK", null))
+    if (updateDataSrv === -1) return res.status(401).json(this.ResponsePreset.resErr( 
+      400,
+      'Bad request, Minimum length search 3 ',
+      'service'
+    ))
   }
 
   async updateStatus(req, res){
@@ -100,9 +104,15 @@ class RcdController {
   async deleteData(req, res){
     const { id } = req.params
 
-    const deleteDataSrv = await this.RcdService.deleteData(id);
+    const deleteDataSrv = await this.RcdService.deleteData(id, req.middlewares.authorization);
+    if(deleteDataSrv === -1) return res.status(401).json(this.ResponsePreset.resErr(
+      401,
+      'Request Unauthorized',
+      'role',
+      { code: -1 }
+    ));
 
-    return res.status(200).json(this.ResponsePreset.resOK("OK", deleteDataSrv));
+    if(deleteDataSrv === 1) return res.status(200).json(this.ResponsePreset.resOK("OK", deleteDataSrv));
   }
 
   async getAnalyze(req, res){
@@ -134,8 +144,14 @@ class RcdController {
   async downloadData(req, res){
     try{
       const { category } = req.query;
-      const downloadDocumentSrv = await this.RcdService.downloadData(category);
-  
+      const downloadDocumentSrv = await this.RcdService.downloadData(category, req.middlewares.authorization);
+      if(downloadDocumentSrv === -1) return res.status(401).json(this.ResponsePreset.resErr(
+        401,
+        'Request Unauthorized',
+        'role',
+        { code: -1 }
+      ));
+
       res.setHeader('Content-Type', downloadDocumentSrv.mime);
       res.setHeader('Content-Disposition', 'attachment; filename=' + downloadDocumentSrv.title + '.xlsx');
       res.status(200).send(downloadDocumentSrv.file);
